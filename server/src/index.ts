@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
+import { PORT } from './secrets';
 
 const app: Express = express();
-const PORT = process.env.PORT || 3000;
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hi mom!');

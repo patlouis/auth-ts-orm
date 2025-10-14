@@ -3,6 +3,7 @@ import { PORT } from './secrets';
 import rootRouter from './routes/index';
 import { PrismaClient } from '@prisma/client';
 import { SignUpSchema } from './schema/users';
+import { errorMiddleware } from './middlewares/errors';
 
 const app: Express = express();
 
@@ -21,6 +22,8 @@ export const prismaClient = new PrismaClient({
     }
   }
 })
+
+app.use(errorMiddleware);
 
 
 app.listen(PORT, () => {

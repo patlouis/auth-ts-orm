@@ -5,36 +5,32 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../secrets';
 
 export const signup = async (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
+  try {
+    const { name, email, password } = req.body;
 
-  if(!name || !email || !password) {
-    return res.status(400).json({ message: 'Name, email and password are required.' });
-  }
-
-  let user = await prismaClient.user.findFirst({
-    where: { email },
-  })
-  if (user) {
-    return res.status(400).json({ message: 'User already exists.' });
-  }
-  const hashedPassword = await bcrypt.hash(password, 10);
-  user = await prismaClient.user.create({
-    data: {
-        name, 
-        email,
-        password: hashedPassword 
+    let user = await prismaClient.user.findFirst({
+      where: { email },
+    })
+    if (user) {
+      return res.status(400).json({ message: 'User already exists.' });
     }
-  })
-  res.status(201).json(user);
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user = await prismaClient.user.create({
+      data: {
+          name, 
+          email,
+          password: hashedPassword 
+      }
+    })
+    res.status(201).json(user);
+  } catch (err) {
+    res.status(500).json({ message: 'Internal server error', error: err });
+  }
 }
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-    if(!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
-  
   let user = await prismaClient.user.findFirst({
     where: { email },
   })

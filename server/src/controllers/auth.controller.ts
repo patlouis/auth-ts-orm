@@ -56,3 +56,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
     return res.status(200).json({ user, token });
 }
+
+export const me = async (req: Request, res: Response) => {
+    res.json(req.user);
+}

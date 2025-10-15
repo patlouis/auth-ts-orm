@@ -3,9 +3,12 @@ import { prismaClient } from '..'
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../secrets';
-import { BadRequestsException } from '../exceptions/bad.requests';
+
 import { ErrorCode } from '../exceptions/root';
+import { BadRequestsException } from '../exceptions/bad.requests';
 import { UnprocessableEntity } from '../exceptions/validation';
+import { NotFoundException } from '../exceptions/not.found';
+
 import { SignUpSchema } from '../schema/users';
 
 export const signup = async (req: Request, res: Response, next: NextFunction) => {
@@ -27,33 +30,37 @@ export const signup = async (req: Request, res: Response, next: NextFunction) =>
           password: hashedPassword 
       }
     })
-    res.status(201).json(user);
+    return res.status(201).json(user);
   } catch (err: any) {
     return next(new UnprocessableEntity('Unprocessable Entity', ErrorCode.UNPROCESSABLE_ENTITY, err?.issues))
   }
 }
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  let user = await prismaClient.user.findFirst({
-    where: { email },
-  });
-  if (!user) {
-    return next(new BadRequestsException('User not found', ErrorCode.USER_NOT_FOUND));
+    let user = await prismaClient.user.findFirst({
+      where: { email },
+    });
+    if (!user) {
+      return next(new NotFoundException('User not found', ErrorCode.USER_NOT_FOUND));
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid password.' });
+    }
+
+    const token = jwt.sign({
+      userId: user.id,
+      email: user.email
+    }, JWT_SECRET,
+    { expiresIn: '1h' }
+    );
+
+    return res.status(200).json({ user, token });
+  } catch(err: any) {
+    return res.status(500).json({ message: 'Internal server error', error: err.message });
   }
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    return res.status(401).json({ message: 'Invalid password.' });
-  }
-
-  const token = jwt.sign({
-    userId: user.id,
-    email: user.email
-  }, JWT_SECRET,
-  { expiresIn: '1h' }
-  );
-
-  return res.status(200).json({ user, token });
 }
